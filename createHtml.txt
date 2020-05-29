@@ -1,0 +1,179 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8" />
+    <link href="lib/element-ui/theme-chalk/index.css" rel="stylesheet" />
+    <script src="js/vue.js"></script>
+    <script src="js/Common.js"></script>
+    <script src="lib/element-ui/index.js"></script>
+    <title></title>
+    <style>
+        .el-table .warning-row {
+            background: oldlace;
+        }
+
+        .el-table .success-row {
+            background: #f0f9eb;
+        }
+    </style>
+</head>
+<body>
+    <div id="app">
+        <el-table ref="multipleTable"
+                  v-loading="loading"
+                  :data="tableData"
+                  @sort-change="sortChange"
+                  sortable="custom"
+                  style="width: 100%"
+                  :row-class-name="(o) => o.row.editing ? 'warning-row' : tableRowClassName(o)"
+                  :default-sort="{prop: 'id', order: 'descending'}"
+                  @selection-change="handleSelectionChange">
+            <el-table-column type="selection"
+                             width="55">
+            </el-table-column>
+
+            <el-table-column type="expand" v-if="true">
+                <template slot-scope="scope">
+                    <el-form :model="scope" status-icon label-position="right" label-width="150px">
+                        <el-form-item label="密码:" prop="date">
+                            <el-input v-if="scope.row.editing" type="password" v-model="scope.row.date"></el-input>
+                            <span v-else>{{ scope.row.date }}</span>
+                        </el-form-item>
+                        <el-form-item label="确认密码:" prop="name">
+                            <el-input v-if="scope.row.editing" type="password" v-model="scope.row.name"></el-input>
+                            <span v-else>{{ scope.row.name }}</span>
+                        </el-form-item>
+                        <el-form-item label="年龄:" prop="address">
+                            <el-input v-if="scope.row.editing" type="password" v-model="scope.row.address"></el-input>
+                            <span v-else>{{ scope.row.address }}</span>
+                        </el-form-item>
+                        <el-form-item>
+                            <el-button v-if="!scope.row.editing" type="warning" size="mini" @click="$set(scope.row, 'editing', true)">修改</el-button>
+                            <el-button v-else type="danger" size="mini" @click="save(scope.row)">保存</el-button>
+                        </el-form-item>
+                    </el-form>
+                </template>
+            </el-table-column>
+            <el-table-column label="日期"
+                             sortable="custom"
+                             width="120">
+                <template slot-scope="scope">
+                    {{ scope.row.date }}
+                </template>
+            </el-table-column>
+            <el-table-column prop="name"
+                             sortable="custom"
+                             label="姓名"
+                             width="120">
+            </el-table-column>
+            <el-table-column prop="address"
+                             sortable="custom"
+                             :filters="[{ text: '家', value: '家' }, { text: '公司', value: '公司' }]"
+                             :filter-method="filterTag"
+                             label="地址"
+                             show-overflow-tooltip>
+            </el-table-column>
+            <el-table-column fixed="right"
+                             label="操作">
+                <template slot-scope="scope">
+                    <el-button @click="handleClick(scope.row)" type="danger" size="small">查看</el-button>
+                    <el-button type="danger" size="small">编辑</el-button>
+                </template>
+            </el-table-column>
+        </el-table>
+    </div>
+    
+
+    <script>
+        let $vue = new Vue({
+            el: "#app",
+        data() {
+            return {
+                    tableData: [{
+                    date: '2016-05-03',
+                    name: '王小虎',
+                        address: '上海市普陀区金沙江路 1518 弄'
+                }, {
+                    date: '2016-05-02',
+                    name: '王小虎',
+                            address: '上海市普陀区金沙江路 1518 弄',
+                            editing: false
+
+                }, {
+                    date: '2016-05-04',
+                    name: '王小虎',
+                            address: '上海市普陀区金沙江路 1518 弄',
+                            editing: false
+                }, {
+                    date: '2016-05-01',
+                    name: '王小虎',
+                            address: '上海市普陀区金沙江路 1518 弄',
+                            editing: false
+                }, {
+                    date: '2016-05-08',
+                    name: '王小虎',
+                            address: '上海市普陀区金沙江路 1518 弄',
+                            editing: false
+                }, {
+                    date: '2016-05-06',
+                    name: '王小虎',
+                            address: '上海市普陀区金沙江路 1518 弄',
+                            editing: false
+                }, {
+                    date: '2016-05-07',
+                    name: '王小虎',
+                            address: '上海市普陀区金沙江路 1518 弄',
+                            editing: false
+                    }
+                ],
+                searchParam: {
+                    data: {},
+                    order: "",
+                    iPageNum: 1,
+                    iPageSize: 15
+                },
+                loading: false,
+                multipleSelection: []
+                }
+            },
+
+            watch: {
+                searchParam: {
+                    handler(v1, v2) {
+                        console.log(v1, v2)
+                    },
+                    immediate: true,  //刷新加载 立马触发一次handler
+                    deep: true  // 可以深度检测到 person 对象的属性值的变化
+                }
+            },
+            methods: {
+                loadData() {
+                    loading = true;
+
+                },
+            toggleSelection(rows) {
+            if (rows) {
+                rows.forEach(row => {
+                this.$refs.multipleTable.toggleRowSelection(row);
+                });
+            } else {
+                this.$refs.multipleTable.clearSelection();
+            }
+                },
+                tableRowClassName(a,b,c) {
+                    return ''
+                },
+            handleSelectionChange(val) {
+            this.multipleSelection = val;
+            },
+            sortChange({ prop, order }) {
+                console.log(prop, order)
+            },
+            filterTag(a,b,c) {
+                console.log(a,b,c)
+            }
+        }
+        })
+    </script>
+</body>
+</html>

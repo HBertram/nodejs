@@ -1,7 +1,7 @@
 let fs = require("fs")
 let mysql = require("mysql");
 
-let table = "tbl_steel_nc"
+let table = "tbl_steel_electrode_map"
 let schema = "imould-mes"
 
 
