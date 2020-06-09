@@ -1,7 +1,7 @@
 let fs = require("fs")
 let mysql = require("mysql");
 
-let table = "tbl_steel_electrode_map"
+let table = "tbl_supplier"
 let schema = "imould-mes"
 
 
@@ -28,18 +28,19 @@ connection.query(`select column_name,column_comment,data_type from information_s
 
 
 function getColumnPrefix(type) {
-  return type == "int" || type == "smallint" ? "i" : 
+  return type == "int" || type == "smallint" || type=="tinyint" ? "i" : 
          type == "double" ? "d" : 
          "str"
 }
 function getColumnType(type) {
-  return type == "int" || type == "smallint" ? "Integer" : 
+  return type == "int" || type == "smallint" || type=="tinyint" ? "Integer" : 
          type == "double" ? "Double" :
          "String"
 }
 function getColumnDBType(type) {
-  return type == "int" || type == "smallint" ? "DB_INT" : 
+  return type == "int" || type == "smallint" || type=="tinyint" ? "DB_INT" : 
          type == "double" ? "DB_DOUBLE" :
+         type == "timestamp" ? "DB_TIMESTAMP" :
          "DB_VARCHAR"
 }
 
@@ -97,7 +98,7 @@ Imports iMouldBaseLib
 <WebServiceBinding(ConformsTo:=WsiProfiles.BasicProfile1_1)> _
 <Global.Microsoft.VisualBasic.CompilerServices.DesignerGenerated()> _
 Public Class C${upperTable}ServiceBase
-    Inherits CommonService
+    Inherits CommonServiceWithWebMethod(Of C${upperTable})
 
     '根据ID查信息
     <WebMethod(True)> _
@@ -140,6 +141,20 @@ Public Class C${upperTable}ServiceBase
         Return bRet
     End Function
 
+    '添加信息
+    <WebMethod(True)> _
+    <ScriptMethod(UseHttpGet:=False, ResponseFormat:=ResponseFormat.Json, XmlSerializeString:=False)> _
+    Public Overridable Function WAdd${upperTable}(ByVal o${upperTable} As C${upperTable}) As String
+        If HasPermit("add_${table}") = False Then
+            Return MesCommonLib.COMMONERROR("没有权限")
+        End If
+        If o${upperTable}.InsertRecord(m_oDb) Then
+            Return MesCommonLib.SUCCESSRESULT
+        Else
+            Return MesCommonLib.COMMONERROR("插入失败")
+        End If
+    End Function
+
     '根据ID删除信息
     <WebMethod(True)> _
     <ScriptMethod(UseHttpGet:=False, ResponseFormat:=ResponseFormat.Json, XmlSerializeString:=False)> _
@@ -176,9 +191,10 @@ Public Class C${upperTable}ServiceBase
     '【web版】条件查询
     <WebMethod(True)> _
     <ScriptMethod(UseHttpGet:=False, ResponseFormat:=ResponseFormat.Json, XmlSerializeString:=False)> _
-    Public Overridable Function WSearch${upperTable}s(o${upperTable} As C${upperTable}, strOrder As String, ByVal iPageNum As Integer, ByVal iPageSize As Integer) As String
+    Public Overridable Function WSearch${upperTable}s(dicParam As Dictionary(Of String, Object), strOrder As String, ByVal iPageNum As Integer, ByVal iPageSize As Integer) As String
         Dim oPageQ As CPageQueryResult(Of C${upperTable}) = New CPageQueryResult(Of C${upperTable})
-        If o${upperTable}.GetCustomerRecordListByPage(o${upperTable}.GetStrWhere(m_oDb), strOrder, iPageNum, iPageSize, oPageQ, m_oDb) Then
+        Dim o As CMaterialPurchase = (New CMaterialPurchase)
+        If o.GetCustomerRecordListByPage(o.GetStrWhere(dicParam, m_oDb), strOrder, iPageNum, iPageSize, oPageQ, m_oDb) Then
             Return JSON.stringify(oPageQ)
         End If
         Return MesCommonLib.COMMONERROR
@@ -295,39 +311,45 @@ function createTableBaseCode() {
 
 
   let template = `
-  '************************************************
-  '
-  '    作用/描述： 数据库表 [${table}]映射类,本类自动实现数据库的增删查改分页等操作
-  '    注意：  本文件由工具自动生成，切勿手动修改，需要新增功能时，新建一个类并继承此类，新功能在子类中实现即可，避免重新生成代码时被覆盖。
-  '
-  '    作者：NodeJsCoder
-  '    日期：${new Date().toString()}
-  '
-  '************************************************
+'************************************************
+'
+'    作用/描述： 数据库表 [${table}]映射类,本类自动实现数据库的增删查改分页等操作
+'    注意：  本文件由工具自动生成，切勿手动修改，需要新增功能时，新建一个类并继承此类，新功能在子类中实现即可，避免重新生成代码时被覆盖。
+'
+'    作者：NodeJsCoder
+'    日期：${new Date().toString()}
+'
+'************************************************
+
+Imports iMouldBaseLib
+Imports System.Data
   
-  Imports iMouldBaseLib
-  Imports System.Data
   
-  
-  <Serializable()> Public Class C${upperTable}Base
-      Inherits CDbTableBase
-  
-      Public Sub New()
-          MyBase.New("${table}")
-          m_strDbName="${schema}"
-      End Sub
-  
-      Public Overridable Function GetStrWhere(oDb As MySqlDb, Optional joiner As String = " And ") As String
-          Return ""
-      End Function
-  
-      Protected Overrides Sub MapAllMembers()
-          ${mapper.join("\n")}
-      End Sub
-  
-      ${properties.join("\n")}
-  
-  End Class
-  `
-  save(`Output/${table}/C${upperTable}Base.vb`, template)
+    <Serializable()> Public Class C${upperTable}Base
+    Inherits CDbTableBase
+
+    Public Sub New()
+        MyBase.New("${table}")
+        m_strDbName="${schema}"
+    End Sub
+
+    Public Overridable Overloads Function GetStrWhere(dicParam As Dictionary(Of String, Object), oDb As MySqlDb, Optional joiner As String = " And ") As String
+        Dim lst As List(Of String) = New List(Of String)
+        Return String.Join(joiner, lst)
+    End Function
+
+    Public Overridable Overloads Function GetStrWhere(strKeyword As String, oDb As MySqlDb) As String
+        Return ""
+    End Function
+
+    Protected Overrides Sub MapAllMembers()
+        ${mapper.join("\n")}
+    End Sub
+
+    ${properties.join("\n")}
+
+End Class
+`
+save(`Output/${table}/C${upperTable}Base.vb`, template)
+console.log("save " + `Output/${table}/C${upperTable}Base.vb`)
 }
