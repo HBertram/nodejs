@@ -1,7 +1,7 @@
 let fs = require("fs")
 let mysql = require("mysql");
 
-let table = "tbl_supplier"
+let table = "tbl_work_order"
 let schema = "imould-mes"
 
 
