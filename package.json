@@ -9,6 +9,8 @@
   "author": "",
   "license": "ISC",
   "dependencies": {
-    "mysql": "^2.18.1"
+    "amqplib": "^0.6.0",
+    "mysql": "^2.18.1",
+    "nodejs-websocket": "^1.7.2"
   }
 }

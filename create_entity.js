@@ -117,7 +117,7 @@ function Handle(table) {
             @Column(name = "${s}")
             `            +
             (
-                getColumnType(sb.data_type) == "Date" ? `@Temporal(TemporalType.TIMESTAMP)\n@JsonFormat(pattern="yyyy-MM-dd HH:mm:ss")`:''
+                getColumnType(sb.data_type) == "Date" ? `@Temporal(TemporalType.TIMESTAMP)\n            @JsonFormat(pattern="yyyy-MM-dd HH:mm:ss")`:''
             )
             +
             `
@@ -153,14 +153,21 @@ import com.fasterxml.jackson.annotation.JsonFormat;
         let template2 = `
         package com.imould.mes.dao.repository;
         
-        import org.springframework.data.jpa.repository.JpaRepository;
-        import org.springframework.stereotype.Repository;
-        
+        import java.util.List;
+
+import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
+import org.springframework.stereotype.Repository;
+
         import com.imould.mes.dao.entity.${upperTable};
         
         @Repository
-        public interface ${upperTable}Repository extends JpaRepository<${upperTable}, String>{
-            
+        public interface ${upperTable}Repository extends JpaRepository<${upperTable}, Integer>{
+                
+            @Query(nativeQuery=true, value = "select o.* from ${table} as o where o.id like %?% limit ?")
+            List<${upperTable}> fuzzyFind(@Param("key") String key, @Param("size")Integer size);
+
         }
         `  
         save(`Output/java/Repository/${upperTable}Repository.java`, template2)
@@ -171,6 +178,7 @@ import com.fasterxml.jackson.annotation.JsonFormat;
 `package com.imould.mes.api;
 
 import java.util.Map;
+import java.util.List;
 
 import org.apache.commons.beanutils.BeanUtils;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -202,7 +210,7 @@ public class ${upperTable}Controller {
 	private ${upperTable}Repository ${name}Rpy;
 	
 	@GetMapping("/${name}/{id}")@ResponseBody
-	public ApiResult<${upperTable}> getOne(@PathVariable String id) {
+	public ApiResult<${upperTable}> getOne(@PathVariable Integer id) {
 		return ApiResultBuilder.success(${name}Rpy.getOne(id));
 	}
 	
@@ -215,8 +223,13 @@ public class ${upperTable}Controller {
 		PageRequest pageRequest = PageRequest.of(page, size, Sort.by(direction.equals("desc") ? Order.desc(order) : Order.asc(order)));
 		Page<${upperTable}> p = ${name}Rpy.findAll(Example.of(temp), pageRequest);
 		return ApiResultBuilder.success(p);
-	}
-	
+    }
+    
+    @GetMapping("/${name}s/fuzzy")@ResponseBody
+	public ApiResult<List<${upperTable}>> fuzzyFind(@RequestParam String key, @RequestParam Integer size) {
+		return ApiResultBuilder.success(${name}Rpy.fuzzyFind(key, size));
+    }
+    
 	@PostMapping("/${name}")@ResponseBody
 	public ApiResult<${upperTable}> post(@RequestBody ${upperTable} ${name}) {
     	${upperTable} p = ${name}Rpy.save(${name});
@@ -230,7 +243,7 @@ public class ${upperTable}Controller {
 	}
 	
 	@DeleteMapping("/${name}/{id}")@ResponseBody
-	public ApiResult<?> delete(@PathVariable String id) {
+	public ApiResult<?> delete(@PathVariable Integer id) {
 		${name}Rpy.deleteById(id);
 		return ApiResultBuilder.successNoData();
 	}
@@ -262,7 +275,11 @@ public class ${upperTable}Controller {
 			return \`${name}s/\${page}/\${size}\`
 		},
 		method: "get"
-	},
+    },
+    fuzzySearch${upperTable}: {
+		url: "${name}s/fuzzy",
+		method: "get"
+    },
 	delete${upperTable}: {
 		urlFunc: ({ id }) => {
 			return \`${name}/\${ id }\`
